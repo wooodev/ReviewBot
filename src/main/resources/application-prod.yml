@@ -1,0 +1,11 @@
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false
+
+logging:
+  level:
+    com.reviewbot: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
