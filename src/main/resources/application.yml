@@ -106,6 +106,9 @@ rate-limit:
     hourly: 1000
     monthly: -1  # unlimited
 
+app:
+  frontend-url: ${APP_FRONTEND_URL:http://localhost:3000}
+
 management:
   endpoints:
     web:
