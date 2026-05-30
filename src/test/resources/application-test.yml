@@ -1,0 +1,59 @@
+spring:
+  # Testcontainers @DynamicPropertySource가 덮어씀 — 플레이스홀더만 제공
+  datasource:
+    url: jdbc:postgresql://localhost:5432/reviewbot_test
+    username: test
+    password: test
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: test-client-id
+            client-secret: test-client-secret
+            scope: read:user
+
+jwt:
+  secret: "test-jwt-secret-must-be-at-least-32-characters-here!"
+  access-token-expiry: 3600000
+  refresh-token-expiry: 604800000
+
+github:
+  api:
+    base-url: http://localhost:19999   # MockWebServer로 대체
+  webhook:
+    secret: test-webhook-secret
+
+ai:
+  claude:
+    api-key: test-api-key
+    base-url: http://localhost:19998   # MockWebServer로 대체
+    model: claude-test-model
+    max-tokens: 100
+    version: "2023-06-01"
+
+app:
+  base-url: http://localhost:8080
+  frontend-url: http://localhost:3000
+
+async:
+  review:
+    core-pool-size: 1
+    max-pool-size: 2
+    queue-capacity: 10
+    thread-name-prefix: "test-worker-"
+
+logging:
+  level:
+    com.reviewbot: DEBUG
+    org.flywaydb: INFO
