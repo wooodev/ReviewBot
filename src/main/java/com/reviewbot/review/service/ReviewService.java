@@ -110,38 +110,44 @@ public class ReviewService {
 
     @Transactional
     public ReviewResponse triggerManual(String userId, ManualReviewRequest request) {
+        UUID uid = UUID.fromString(userId);
+
+        // @EntityGraph 메서드로 User 즉시 로딩 — @Async 경계 전에 프리미티브 추출
         GithubRepository repo = githubRepositoryRepository
-                .findByIdAndUserId(request.repositoryId(), UUID.fromString(userId))
+                .findWithUserByIdAndUserId(request.repositoryId(), uid)
                 .orElseThrow(() -> new ResourceNotFoundException("Repository not found"));
 
         Review review = reviewRepository.save(
-                Review.of(repo, request.prNumber(), null, null));
+                Review.of(githubRepositoryRepository.getReferenceById(repo.getId()),
+                        request.prNumber(), null, null));
 
-        // 비동기 리뷰 시작을 위해 간단한 Webhook Payload 생성
-        triggerManualAsync(review.getId(), repo, request.prNumber());
+        // 엔티티 대신 프리미티브 전달 → LazyInitializationException 방지
+        triggerManualAsync(
+                review.getId(),
+                repo.getId(),
+                repo.getFullName(),
+                repo.getUser().getAccessToken(),
+                repo.getUser().getId().toString(),
+                repo.getUser().getPlan().name().toLowerCase(),
+                request.prNumber()
+        );
 
         return ReviewResponse.from(review);
     }
 
     @Async("reviewTaskExecutor")
-    public void triggerManualAsync(UUID reviewId, GithubRepository repo, int prNumber) {
-        String accessToken = repo.getUser().getAccessToken();
-        String repoFullName = repo.getFullName();
-        UUID repoId = repo.getId();
-
+    public void triggerManualAsync(UUID reviewId, UUID repoId, String repoFullName,
+                                   String accessToken, String ownerId, String plan, int prNumber) {
         Review review = reviewRepository.findById(reviewId).orElse(null);
         if (review == null) return;
 
         try {
-            rateLimitService.checkAndConsume(
-                    repo.getUser().getId().toString(),
-                    repo.getUser().getPlan().name().toLowerCase());
+            rateLimitService.checkAndConsume(ownerId, plan);
 
             String diff = gitHubService.getPullRequestDiff(accessToken, repoFullName, prNumber);
             RepositoryConfig config = repositoryConfigRepository.findByRepositoryId(repoId).orElse(null);
             List<AiReviewComment> aiComments = aiReviewService.analyzeCode(diff, config);
 
-            // 수동 트리거는 PR head SHA가 없으므로 GitHub에서 조회
             String githubReviewId = gitHubService.postReviewComments(
                     accessToken, repoFullName, prNumber, null, aiComments);
 

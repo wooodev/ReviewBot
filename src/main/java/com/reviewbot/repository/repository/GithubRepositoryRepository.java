@@ -16,7 +16,11 @@ public interface GithubRepositoryRepository extends JpaRepository<GithubReposito
 
     boolean existsByUserIdAndGithubRepoId(UUID userId, String githubRepoId);
 
-    /** User를 즉시 로딩 — 비동기 리뷰 워커에서 LazyInitializationException 방지 */
+    /** User를 즉시 로딩 — Webhook 비동기 워커용 */
     @EntityGraph(attributePaths = {"user"})
     Optional<GithubRepository> findByGithubRepoIdAndActiveTrue(String githubRepoId);
+
+    /** User를 즉시 로딩 — 수동 트리거 비동기 워커용 */
+    @EntityGraph(attributePaths = {"user"})
+    Optional<GithubRepository> findWithUserByIdAndUserId(UUID id, UUID userId);
 }
