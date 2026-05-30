@@ -1,17 +1,14 @@
 # ── Build Stage ────────────────────────────────────────────────────────────────
-FROM eclipse-temurin:21-jdk-alpine AS builder
+# gradle 이미지를 사용하므로 gradlew wrapper 불필요
+FROM gradle:8.12-jdk21-alpine AS builder
 WORKDIR /workspace
 
-COPY gradlew .
-COPY gradle gradle
-COPY build.gradle .
-COPY settings.gradle .
-
-# Dependency cache layer
-RUN ./gradlew dependencies --no-daemon 2>/dev/null || true
+# 의존성 캐시 레이어 (소스 변경 시에도 재다운로드 방지)
+COPY build.gradle settings.gradle ./
+RUN gradle dependencies --no-daemon -q 2>/dev/null || true
 
 COPY src src
-RUN ./gradlew bootJar --no-daemon -x test
+RUN gradle bootJar --no-daemon -x test
 
 # ── Runtime Stage ──────────────────────────────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine
